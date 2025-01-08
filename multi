@@ -1,0 +1,152 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Star, Trophy, Clock, Heart } from 'lucide-react';
+
+const MultiplicationQuest = () => {
+  const [level, setLevel] = useState(1);
+  const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [lives, setLives] = useState(3);
+  const [question, setQuestion] = useState({ num1: 2, num2: 1 });
+  const [answer, setAnswer] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [gameState, setGameState] = useState('playing');
+  const [timeLeft, setTimeLeft] = useState(30);
+  const [showTimer, setShowTimer] = useState(false);
+  const [rewards, setRewards] = useState([]);
+
+  const characters = {
+    1: '🦊 Fox',
+    2: '🦉 Owl',
+    3: '🐼 Panda',
+    4: '🦁 Lion'
+  };
+
+  const generateQuestion = () => {
+    const maxNum = Math.min(level + 1, 10);
+    const num1 = Math.floor(Math.random() * maxNum) + 2;
+    const num2 = Math.floor(Math.random() * 10) + 1;
+    setQuestion({ num1, num2 });
+  };
+
+  useEffect(() => {
+    if (showTimer && timeLeft > 0 && gameState === 'playing') {
+      const timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [timeLeft, showTimer, gameState]);
+
+  const checkAnswer = () => {
+    const correct = question.num1 * question.num2 === parseInt(answer);
+    
+    if (correct) {
+      const bonus = streak >= 3 ? 20 : 0;
+      setScore(s => s + 10 + bonus);
+      setStreak(s => s + 1);
+      setFeedback(`Fantastic! ${bonus ? 'Bonus points for your streak! 🌟' : ''}`);
+      
+      if (score + 10 + bonus >= level * 100) {
+        setLevel(l => l + 1);
+        setRewards(r => [...r, `Level ${level} Champion!`]);
+        setFeedback('Level Complete! 🎉');
+        setGameState('levelUp');
+        return;
+      }
+    } else {
+      setLives(l => l - 1);
+      setStreak(0);
+      setFeedback(`The answer is ${question.num1 * question.num2}. Keep trying! ${characters[level]} believes in you!`);
+      
+      if (lives <= 1) {
+        setGameState('gameOver');
+        return;
+      }
+    }
+    
+    setAnswer('');
+    generateQuestion();
+  };
+
+  const startNewGame = () => {
+    setLevel(1);
+    setScore(0);
+    setStreak(0);
+    setLives(3);
+    setTimeLeft(30);
+    setGameState('playing');
+    generateQuestion();
+  };
+
+  if (gameState === 'gameOver') {
+    return (
+      <Card className="w-full max-w-lg mx-auto p-6 text-center">
+        <h2 className="text-2xl font-bold mb-4">Game Over!</h2>
+        <p className="mb-4">Final Score: {score}</p>
+        <p className="mb-4">Rewards Earned: {rewards.join(', ')}</p>
+        <Button onClick={startNewGame}>Play Again</Button>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="w-full max-w-lg mx-auto p-6">
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-2">
+          <Star className="text-yellow-500" />
+          <span>Score: {score}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Heart className="text-red-500" />
+          <span>Lives: {lives}</span>
+        </div>
+        {showTimer && (
+          <div className="flex items-center gap-2">
+            <Clock />
+            <span>{timeLeft}s</span>
+          </div>
+        )}
+      </div>
+
+      <Progress value={(score % 100) / level} className="mb-4" />
+
+      <CardContent className="text-center">
+        <div className="text-4xl mb-6">
+          {characters[level]} {question.num1} × {question.num2} = ?
+        </div>
+
+        <input
+          type="number"
+          value={answer}
+          onChange={(e) => setAnswer(e.target.value)}
+          className="w-24 text-center text-2xl p-2 border rounded mb-4"
+          onKeyPress={(e) => e.key === 'Enter' && checkAnswer()}
+        />
+
+        <div className="flex gap-4 justify-center mb-4">
+          <Button onClick={checkAnswer}>Submit</Button>
+          <Button 
+            variant="outline"
+            onClick={() => setShowTimer(t => !t)}
+          >
+            {showTimer ? 'Disable' : 'Enable'} Timer
+          </Button>
+        </div>
+
+        <div className="min-h-12 text-lg">
+          {feedback}
+        </div>
+
+        {streak >= 3 && (
+          <div className="flex items-center justify-center gap-2 text-yellow-500">
+            <Trophy />
+            <span>Streak: {streak}</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default MultiplicationQuest;
